@@ -72,14 +72,29 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // 使用 OpenAI 進行文本翻譯的函式
-async function translateText(answer, originalMessage) {
+async function translateText(answer, originalMessage, temperature = 0.7) {
     try {
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
-                { role: "system", content: `你是一名專業翻譯。如果使用者的語系是英文就不用翻譯按照原本資料庫內容回覆，如果是其他語系請根據使用者語系翻譯內容，將以下文本翻譯成${originalMessage}。請只翻譯純文字內容mardown內容也要列出。盡可能保持原意和語氣。`},
-                { role: "user", content: answer}
+                { role: "system", content: `You are a professional translator with expertise in multiple languages. Your task is to accurately translate the given content while preserving its original meaning, tone, and style. Follow these guidelines:
+
+                    1. Identify the source language of the input text.
+                    2. If the source language is the same as the target language (${originalMessage}), return the original text without translation.
+                    3. If translation is needed, translate the content into the specified target language (${originalMessage}).
+                    4. Preserve all formatting, including Markdown syntax, HTML tags, and code blocks.
+                    5. Maintain the original text's tone, whether formal, casual, technical, or conversational.
+                    6. Accurately translate idioms, colloquialisms, and culture-specific references when possible. If a direct translation is not feasible, provide an equivalent expression in the target language.
+                    7. For technical terms or specialized vocabulary, use the accepted translations or keep them in their original form if that's the convention in the target language.
+                    8. Ensure that any placeholders, variables, or dynamic content (e.g., {variable_name}) remain unchanged.
+                    9. If there are ambiguities or multiple possible interpretations, choose the most likely one based on context, and add a translator's note if necessary.
+                    10. For content that should not be translated (e.g., code snippets, proper nouns), leave it in its original form.
+                    11. When translating into Chinese, pay special attention to using the correct Traditional or Simplified characters and language habits. For example, "software" is "軟件" in Simplified Chinese and "軟體" in Traditional Chinese, "CD" is "光盘" in Simplified Chinese and "光碟" in Traditional Chinese.
+
+                    Strive for a translation that reads naturally in the target language while faithfully representing the original content.`},
+                { role: "user", content: answer }
             ],
+            temperature: temperature
         });
 
         return response.choices[0].message.content.trim();
