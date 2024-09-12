@@ -1,14 +1,24 @@
-FROM postgres:13.2-alpine
+FROM node:18-alpine
 
-RUN apk add --no-cache make gcc g++ clang llvm10 wget
+# 安裝 pnpm 和 PostgreSQL 客戶端庫
+RUN apk add --no-cache postgresql-dev
+RUN npm install -g pnpm
 
-RUN wget https://github.com/pgvector/pgvector/archive/refs/tags/v0.1.4.tar.gz \
-    && tar -xzvf v0.1.4.tar.gz \
-    && cd pgvector-0.1.4 \
-    && make && make install
+WORKDIR /app
 
-RUN apk del make gcc g++ clang llvm10
+# 複製 package.json 和 pnpm-lock.yaml（如果存在）
+COPY package.json pnpm-lock.yaml* ./
 
-EXPOSE 5002
-ENV PORT=5002
-CMD node server.js
+# 嘗試使用 frozen-lockfile，如果失敗則不使用
+RUN pnpm install --frozen-lockfile || pnpm install
+
+# 複製源代碼
+COPY . .
+
+# 再次運行安裝以確保所有依賴都已安裝
+RUN pnpm install
+RUN pnpm run build
+
+EXPOSE 3001
+# ENV PORT=5002
+CMD ["pnpm", "start"]

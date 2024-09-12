@@ -124,7 +124,49 @@ async function generateEmbedding(text) {
     }
 }
 
+// 新增資料的 API
+app.post('/api/add', async (req, res) => {
+    const { message, response } = req.body;
 
+    if (!message || !response) {
+        return res.status(400).json({ error: 'Both message and response are required' });
+    }
+
+    try {
+        // 生成訊息的嵌入向量
+        const embedding = await generateEmbedding(message);
+
+        // 開始資料庫事務
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 插入新的聊天記錄
+            const chatResult = await client.query(
+                'INSERT INTO chatbot (message, response) VALUES ($1, $2) RETURNING id',
+                [message, response]
+            );
+            const chatbotId = chatResult.rows[0].id;
+
+            // 插入嵌入向量
+            await client.query(
+                'INSERT INTO embeddings (chatbot_id, embedding) VALUES ($1, $2)',
+                [chatbotId, embedding]
+            );
+
+            await client.query('COMMIT');
+            res.status(201).json({ message: 'Data added successfully' });
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Error adding data:', err);
+        res.status(500).json({ error: 'An error occurred while adding data' });
+    }
+});
 
 // 啟動伺服器
 app.listen(port, () => {
