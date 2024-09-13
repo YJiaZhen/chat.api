@@ -16,8 +16,7 @@ RUN pnpm install --frozen-lockfile || pnpm install
 COPY . .
 
 # 再次運行安裝以確保所有依賴都已安裝
-RUN pnpm install
-RUN pnpm run build
+# RUN pnpm run build
 
 EXPOSE 3001
 # ENV PORT=5002
