@@ -14,12 +14,12 @@ services:
     ports:
       - "5432:5432"
   api:
-    image: yjz039/chatbotapi:v1
+    image: yjz039/api:latest
     container_name: api3
     # network_mode: "host"
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: ./Dockerfile
     restart: always
     ports:
       - 3001:3001
@@ -33,11 +33,11 @@ services:
     # platform: "linux/amd64"   # 指定平台為 x86_64
 
   chatbot:
-  #  image: yjz039/chatbot:latest
+    image: yjz039/aichatbotapi-chatbot:latest
     container_name: chatbot3
-    build:
-      context: ../clone-gemini-chatbot
-      dockerfile: ./Dockerfile
+    # build:
+    #   context: ../clone-gemini-chatbot
+    #   dockerfile: ./Dockerfile
     restart: always
     ports:
       - 3000:3000
