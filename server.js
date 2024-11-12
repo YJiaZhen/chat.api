@@ -14,7 +14,7 @@ const pool = new Pool({
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
-    port: 5432,
+    port: 5433,
     max: 5
 });
 
@@ -27,8 +27,27 @@ const openai = new OpenAI({
 app.use(cors());
 app.use(bodyParser.json());
 
+const apiKey = 'iam-roy';  // 將這個替換為你的實際API密鑰
 
-
+// 中間件函數用於檢查API密鑰
+function authenticateApiKey(req, res, next) {
+  const userApiKey = req.get('X-API-Keyf');
+  console.log('middleware')
+  if (userApiKey && userApiKey === apiKey) {
+    next();
+  } else {
+    res.status(401).json({ error: '未經授權的訪問' });
+  }
+}
+function log(req, res, next){
+    console.log('middleware22',req.headers)
+    next();
+}
+// 在路由中使用認證中間件
+app.get('/health',[authenticateApiKey, log], (req, res) => {
+    console.log('!!!')
+  res.send('我還活著');
+});
 // 搜尋相似訊息並翻譯的 API
 app.post('/api/chat', async (req, res) => {
     const { message} = req.body;

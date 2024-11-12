@@ -18,7 +18,7 @@ services:
     container_name: api3
     # network_mode: "host"
     build:
-#      context: .
+      context: .
       dockerfile: ./Dockerfile
     restart: always
     ports:
@@ -27,14 +27,17 @@ services:
       - ragdb
     environment:
       - DB_USER=${DB_USER}
-      - DB_HOST=ragdb
+      - DB_HOST=localhost
       - DB_NAME=${DB_NAME}
       - DB_PASSWORD=${DB_PASSWORD}
     # platform: "linux/amd64"   # 指定平台為 x86_64
 
   chatbot:
-    image: yjz039/chatbot:latest
+  #  image: yjz039/chatbot:latest
     container_name: chatbot3
+    build:
+      context: ../clone-gemini-chatbot
+      dockerfile: ./Dockerfile
     restart: always
     ports:
       - 3000:3000
@@ -42,7 +45,7 @@ services:
       - ragdb
     environment:
       - DB_USER=${DB_USER}
-      - DB_HOST=ragdb
+      - DB_HOST=localhost
       - DB_NAME=${DB_NAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - OPENAI_API_KEY=${OPENAI_API_KEY}

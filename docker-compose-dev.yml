@@ -6,36 +6,58 @@ services:
     container_name: postgres_db3
     restart: always
     environment:
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "920309"
-      POSTGRES_DB: "postgres"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pg_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-  api:
-    image: yjz039/todoapi:v1
-    container_name: api3
-#    build:
-#      context: .
-#      dockerfile: ./Dockerfile
-    restart: always
-    ports:
-      - 5002:5002
-    depends_on:
-      - ragdb
-    environment:
-      - DB_USER=postgres
-      - DB_HOST=postgres_db
-      - DB_NAME=postgres
-      - DB_PASSWORD=920309
-    platform: "linux/amd64"   # 指定平台為 x86_64
+  # api:
+  #   image: yjz039/chatbotapi:v1
+  #   container_name: api3
+  #   # network_mode: "host"
+  #   build:
+  #     context: .
+  #     dockerfile: ./Dockerfile
+  #   restart: always
+  #   ports:
+  #     - 3001:3001
+  #   depends_on:
+  #     - ragdb
+  #   environment:
+  #     - DB_USER=${DB_USER}
+  #     - DB_HOST=localhost
+  #     - DB_NAME=${DB_NAME}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+    # platform: "linux/amd64"   # 指定平台為 x86_64
+
+  # chatbot:
+  # #  image: yjz039/chatbot:latest
+  #   container_name: chatbot3
+  #   build:
+  #     context: ../clone-gemini-chatbot
+  #     dockerfile: ./Dockerfile
+  #   restart: always
+  #   ports:
+  #     - 3000:3000
+  #   depends_on:
+  #     - ragdb
+  #   environment:
+  #     - DB_USER=${DB_USER}
+  #     - DB_HOST=localhost
+  #     - DB_NAME=${DB_NAME}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+  #     - NEXT_PUBLIC_API_DOMAIN=${NEXT_PUBLIC_API_DOMAIN}
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin3
     environment:
-      PGADMIN_DEFAULT_EMAIL: "luciayang0309@gmail.com"
-      PGADMIN_DEFAULT_PASSWORD: "920309"
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "8888:80"
     volumes:

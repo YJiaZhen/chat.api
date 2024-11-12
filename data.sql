@@ -11,3 +11,4 @@ CREATE TABLE embeddings (
     embedding VECTOR(1536) NOT NULL
 );
 
+CREATE EXTENSION IF NOT EXISTS vector;
