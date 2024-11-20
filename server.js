@@ -14,10 +14,10 @@ const pool = new Pool({
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
-    port: 5433,
+    port: 5432,
     max: 5
 });
-
+console.log('pool',pool)
 // 配置 OpenAI API
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -32,7 +32,7 @@ const apiKey = 'iam-roy';  // 將這個替換為你的實際API密鑰
 // 中間件函數用於檢查API密鑰
 function authenticateApiKey(req, res, next) {
   const userApiKey = req.get('X-API-Keyf');
-  console.log('middleware')
+  console.log('!!!middleware')
   if (userApiKey && userApiKey === apiKey) {
     next();
   } else {
@@ -50,7 +50,7 @@ app.get('/health',[authenticateApiKey, log], (req, res) => {
 });
 // 搜尋相似訊息並翻譯的 API
 app.post('/api/chat', async (req, res) => {
-    const { message} = req.body;
+    const {message} = req.body;
 
     if (!message) {
         return res.status(400).json({ error: 'Message and user language are required' });
@@ -91,35 +91,126 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // 使用 OpenAI 進行文本翻譯的函式
-async function translateText(answer, originalMessage, temperature = 0.7) {
+async function translateText(answer, originalMessage, temperature = 0.3) {
+    console.log('answer',answer)
+    // 改進的語言檢測
+    const detectLanguage = (text) => {
+        // 日文檢測（優先檢測）
+        // 檢查是否包含平假名或片假名，這是日文的唯一特徵
+        if (/[\u3040-\u309F]|[\u30A0-\u30FF]/.test(text)) {
+            return 'ja';
+        }
+        
+        // 韓文檢測
+        if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(text)) {
+            return 'ko';
+        }
+
+        // 中文檢測
+        // 只包含漢字而不包含假名才判斷為中文
+        if (/[\u4E00-\u9FFF]/.test(text) && 
+            !/[\u3040-\u309F]|[\u30A0-\u30FF]/.test(text)) {
+            return 'zh';
+        }
+
+        // 預設為英文
+        return 'en';
+    };
+
+    // 獲取語言顯示名稱
+    const getLanguageName = (langCode) => {
+        const langMap = {
+            'zh': 'Traditional Chinese',
+            'ja': 'Japanese',
+            'ko': 'Korean',
+            'en': 'English'
+        };
+        return langMap[langCode];
+    };
+
+    // 更詳細的語言檢測日誌
+    const inputLanguage = detectLanguage(originalMessage);
+    console.log('Detected language:', {
+        text: originalMessage.substring(0, 50), // 只記錄前50個字符
+        detectedLanguage: inputLanguage,
+        hasHiragana: /[\u3040-\u309F]/.test(originalMessage),
+        hasKatakana: /[\u30A0-\u30FF]/.test(originalMessage),
+        hasKanji: /[\u4E00-\u9FFF]/.test(originalMessage),
+        hasHangul: /[\uAC00-\uD7AF\u1100-\u11FF]/.test(originalMessage)
+    });
+
     try {
         const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: "gpt-4",
             messages: [
-                { role: "system", content: `You are a professional translator with expertise in multiple languages. Your task is to accurately translate the given content while preserving its original meaning, tone, and style. Follow these guidelines:
-
-                    1. Identify the source language of the input text.
-                    2. If the source language is the same as the target language (${originalMessage}), return the original text without translation.
-                    3. If translation is needed, translate the content into the specified target language (${originalMessage}).
-                    4. Preserve all formatting, including Markdown syntax, HTML tags, and code blocks.
-                    5. Maintain the original text's tone, whether formal, casual, technical, or conversational.
-                    6. Accurately translate idioms, colloquialisms, and culture-specific references when possible. If a direct translation is not feasible, provide an equivalent expression in the target language.
-                    7. For technical terms or specialized vocabulary, use the accepted translations or keep them in their original form if that's the convention in the target language.
-                    8. Ensure that any placeholders, variables, or dynamic content (e.g., {variable_name}) remain unchanged.
-                    9. If there are ambiguities or multiple possible interpretations, choose the most likely one based on context, and add a translator's note if necessary.
-                    10. For content that should not be translated (e.g., code snippets, proper nouns), leave it in its original form.
-                    11. When translating into Chinese, pay special attention to using the correct Traditional or Simplified characters and language habits. For example, "software" is "軟件" in Simplified Chinese and "軟體" in Traditional Chinese, "CD" is "光盘" in Simplified Chinese and "光碟" in Traditional Chinese.
-
-                    Strive for a translation that reads naturally in the target language while faithfully representing the original content.`},
-                { role: "user", content: answer }
+                { 
+                    role: "system", 
+                    content: `You are a translator with strict language controls.
+                    
+                    CURRENT_INPUT_LANGUAGE: ${getLanguageName(inputLanguage)}
+                    
+                    STRICT RULES:
+                    1. You MUST respond ONLY in ${getLanguageName(inputLanguage)}
+                    2. ANY mixing of languages is FORBIDDEN
+                    3. Keep all technical terms, code, URLs, and Markdown syntax unchanged
+                    4. Preserve all formatting and structure
+                    5. For Chinese translations, always use Traditional Chinese (zh-tw)
+                    
+                    VALIDATION:
+                    - If input is English: Output MUST be 100% English
+                    - If input is Chinese: Output MUST be 100% Traditional Chinese
+                    - If input is Japanese: Output MUST be 100% Japanese
+                    - If input is Korean: Output MUST be 100% Korean
+                    - NO exceptions to these language rules are allowed
+                    
+                    SPECIAL NOTES:
+                    - Technical terms may be kept in English if that's the common practice in the target language
+                    - Programming code blocks must remain unchanged
+                    - URLs and file paths must remain unchanged
+                    - If input contains mixed languages, prioritize the dominant language
+                    - Maintain all original line breaks, spacing, and punctuation`
+                },
+                { 
+                    role: "user", 
+                    content: `ORIGINAL_LANGUAGE: ${getLanguageName(detectLanguage(answer))}
+                    TARGET_LANGUAGE: ${getLanguageName(inputLanguage)}
+                    
+                    CONTENT_TO_TRANSLATE: ${answer}`
+                }
             ],
             temperature: temperature
         });
 
-        return response.choices[0].message.content.trim();
+        const translatedText = response.choices[0].message.content.trim();
+        
+        // 驗證翻譯結果的語言
+        const outputLanguage = detectLanguage(translatedText);
+        
+        // 記錄翻譯結果的語言檢測
+        console.log('Translation result:', {
+            originalLanguage: detectLanguage(answer),
+            targetLanguage: inputLanguage,
+            outputLanguage: outputLanguage,
+            matchesTarget: outputLanguage === inputLanguage,
+            sampleOutput: translatedText.substring(0, 50) // 只記錄前50個字符
+        });
+
+        // 檢查輸出語言是否符合目標語言
+        if (outputLanguage !== inputLanguage) {
+            console.error('Language mismatch detected. Retrying translation...');
+            // 如果語言不匹配，重試翻譯，但要防止無限遞迴
+            // 可以加入重試次數限制
+            return translateText(answer, originalMessage, temperature);
+        }
+
+        return translatedText;
     } catch (error) {
-        console.error('Error translating text:', error);
-        throw new Error('Failed to translate text');
+        console.error('Translation error:', {
+            error: error.message,
+            inputLanguage,
+            originalText: originalMessage.substring(0, 50)
+        });
+        throw new Error(`Translation failed: ${error.message}`);
     }
 }
 // 使用 OpenAI 生成嵌入向量的函式
@@ -186,6 +277,7 @@ app.post('/api/add', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while adding data' });
     }
 });
+
 
 // 啟動伺服器
 app.listen(port, () => {

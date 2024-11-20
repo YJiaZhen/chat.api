@@ -27,17 +27,17 @@ services:
       - ragdb
     environment:
       - DB_USER=${DB_USER}
-      - DB_HOST=localhost
+      - DB_HOST=ragdb
       - DB_NAME=${DB_NAME}
       - DB_PASSWORD=${DB_PASSWORD}
     # platform: "linux/amd64"   # 指定平台為 x86_64
 
   chatbot:
-    image: yjz039/aichatbotapi-chatbot:latest
+    # image: yjz039/aichatbotapi-chatbot:latest
     container_name: chatbot3
-    # build:
-    #   context: ../clone-gemini-chatbot
-    #   dockerfile: ./Dockerfile
+    build:
+      context: ../clone-gemini-chatbot
+      dockerfile: ./Dockerfile
     restart: always
     ports:
       - 3000:3000
@@ -45,12 +45,15 @@ services:
       - ragdb
     environment:
       - DB_USER=${DB_USER}
-      - DB_HOST=localhost
+      - DB_HOST=ragdb
       - DB_NAME=${DB_NAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      - PORT=3000
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXT_PUBLIC_API_DOMAIN=${NEXT_PUBLIC_API_DOMAIN}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@ragdb:5432/${DB_NAME}
+      - POSTGRES_URL=postgresql://${DB_USER}:${DB_PASSWORD}@ragdb:5432/${DB_NAME}
 
   pgadmin:
     image: dpage/pgadmin4
