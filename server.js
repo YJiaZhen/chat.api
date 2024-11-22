@@ -49,7 +49,7 @@ app.get('/health',[authenticateApiKey, log], (req, res) => {
   res.send('我還活著');
 });
 // 搜尋相似訊息並翻譯的 API
-app.post('/api/chat', async (req, res) => {
+app.post('/api/v1/chat', async (req, res) => {
     const {message} = req.body;
 
     if (!message) {
