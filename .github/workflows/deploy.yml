@@ -40,7 +40,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             echo "Starting API deployment..."
-            cd ~/app  # 更改為你的專案目錄路徑
+            cd ~/chat.api  # 更改為你的專案目錄路徑
             
             # 更新 .env 文件
             cat << EOF > .env
