@@ -283,3 +283,6 @@ app.post('/api/add', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
+
+// 導出 app 以供測試使用
+module.exports = app;
