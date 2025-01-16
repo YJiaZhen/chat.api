@@ -6,6 +6,22 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
+# 定義構建時參數
+ARG DB_HOST
+ARG DB_USER
+ARG DB_NAME
+ARG DB_PASSWORD
+ARG POSTGRES_URL
+ARG DATABASE_URL
+
+# 設置環境變數
+ENV DB_HOST=$DB_HOST
+ENV DB_USER=$DB_USER
+ENV DB_NAME=$DB_NAME
+ENV DB_PASSWORD=$DB_PASSWORD
+ENV POSTGRES_URL=$POSTGRES_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 # 複製 package.json 和 pnpm-lock.yaml（如果存在）
 COPY package.json pnpm-lock.yaml* ./
 
@@ -15,9 +31,6 @@ RUN pnpm install --frozen-lockfile || pnpm install
 # 複製源代碼
 COPY . .
 
-# 再次運行安裝以確保所有依賴都已安裝
-# RUN pnpm run build
-
 EXPOSE 3001
-# ENV PORT=5002
+
 CMD ["pnpm", "start"]

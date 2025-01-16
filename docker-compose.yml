@@ -21,7 +21,7 @@ services:
       - postgres
   
   api:
-    image: api:latest
+    image: yjz039/api:latest
     container_name: api
     # network_mode: "host"
     # build:
@@ -40,7 +40,7 @@ services:
     # platform: "linux/amd64"   # 指定平台為 x86_64
 
   chatbot:
-    image: clone-gemini-chatbot-api:latest
+    image: yjz039/clone-gemini-chatbot:latest
     container_name: chatbot
     # build:
     #   context: ../clone-gemini-chatbot

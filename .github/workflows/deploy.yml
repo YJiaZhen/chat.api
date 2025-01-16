@@ -1,9 +1,9 @@
 name: Deploy API
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
 
-jobs:
+  jobs:
   build:
     runs-on: ubuntu-latest
     steps:
@@ -24,6 +24,13 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          build-args: |
+            DB_USER=${{ secrets.DB_USER }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            POSTGRES_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${{ secrets.DB_NAME }}
+            DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${{ secrets.DB_NAME }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/api:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/api:${{ github.sha }}
@@ -38,87 +45,24 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script_stop: true
+          debug: true
+          command_timeout: 30m
           script: |
-            echo "Starting API deployment..."
-            cd ~/chat.api  # 更改為你的專案目錄路徑
-            
-            # 更新 .env 文件
-            cat << EOF > .env
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DB_NAME=${{ secrets.DB_NAME }}
-            PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}
-            PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-            NEXT_PUBLIC_API_DOMAIN=${{ secrets.NEXT_PUBLIC_API_DOMAIN }}
-            EOF
-            
-            # 更新 docker-compose.yml
-            cat << 'EOF' > docker-compose.yml
-            services:
-              postgres:
-                image: postgres:13
-                environment:
-                  - POSTGRES_USER=${{ secrets.DB_USER }}
-                  - POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
-                  - POSTGRES_DB=${{ secrets.DB_NAME }}
-                ports:
-                  - "5432:5432"
-                volumes:
-                  - postgres_data_nextauth_project:/var/lib/postgresql/data
+            whoami
+            echo "Starting deployment..."
+            cd ~/gemini-chatbot
 
-              pgadmin:
-                image: dpage/pgadmin4
-                environment:
-                  PGADMIN_DEFAULT_EMAIL: ${{ secrets.PGADMIN_DEFAULT_EMAIL }}
-                  PGADMIN_DEFAULT_PASSWORD: ${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
-                ports:
-                  - "5050:80"
-                depends_on:
-                  - postgres
-              
-              api:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/api:latest
-                container_name: api
-                restart: always
-                ports:
-                  - 3001:3001
-                depends_on:
-                  - postgres
-                environment:
-                  - DB_USER=${{ secrets.DB_USER }}
-                  - DB_HOST=postgres
-                  - DB_NAME=${{ secrets.DB_NAME }}
-                  - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            # 停止特定服务
+            docker compose stop api
+            docker compose rm -f api
 
-              chatbot:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/clone-gemini-chatbot:latest
-                container_name: chatbot
-                restart: always
-                ports:
-                  - 3000:3000
-                depends_on:
-                  - postgres
-                environment:
-                  - DB_USER=${{ secrets.DB_USER }}
-                  - DB_HOST=postgres
-                  - DB_NAME=${{ secrets.DB_NAME }}
-                  - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-                  - PORT=3000
-                  - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-                  - NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-                  - NEXT_PUBLIC_API_DOMAIN=${{ secrets.NEXT_PUBLIC_API_DOMAIN }}
-                  - DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@postgres:5432/${{ secrets.DB_NAME }}
-                  - POSTGRES_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@postgres:5432/${{ secrets.DB_NAME }}
+            # 删除旧镜像
+            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/api:latest || true
 
-            volumes:
-              postgres_data_nextauth_project:
-            EOF
-            
-            # 登入 Docker Hub
-            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-            
-            # 拉取最新的 API 映像並重啟服務
+            # 拉取特定服务的最新镜像
             docker compose pull api
-            docker compose up -d
+
+            # 启动特定服务
+            docker compose up -d api --no-deps
