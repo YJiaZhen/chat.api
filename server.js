@@ -285,4 +285,4 @@ app.listen(port, () => {
 });
 
 // 導出 app 以供測試使用
-module.exports = app;
+module.exports = { app, server }; 
