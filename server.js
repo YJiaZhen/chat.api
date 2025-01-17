@@ -280,7 +280,7 @@ app.post('/api/add', async (req, res) => {
 
 
 // 啟動伺服器
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
 
